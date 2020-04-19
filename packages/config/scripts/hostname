@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# Set hostname via TX-Pi config
+#
+
+# Retrieve the current hostname
+CURRENT_HOSTNAME=`cat /etc/hostname | tr -d " \t\n\r"`
+NEW_HOSTNAME=$1
+
+echo ${NEW_HOSTNAME} > /etc/hostname
+
+# Replace the current hostname with the new one
+sed -i "s/127.0.1.1.*${CURRENT_HOSTNAME}/127.0.1.1\t${NEW_HOSTNAME}/g" /etc/hosts
+
+exit 0

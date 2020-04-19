@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# Enable / disable I2C via TX-Pi config
+#
+
+case "$1" in
+    enable)
+        echo "Enable I2C"
+        raspi-config nonint do_i2c 0
+    ;;
+    disable)
+        echo "Disable I2C"
+        raspi-config nonint do_i2c 1
+    ;;
+    *)
+        echo "Usage: $0 {enable|disable}"
+        exit 1
+esac

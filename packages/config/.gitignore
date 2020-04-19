@@ -1,0 +1,11 @@
+*.pyc
+.coverage
+.tox
+.idea
+*.egg-info
+htmlcov/*
+dist/*
+build/*
+launcher.py
+TouchStyle.py
+themes/*

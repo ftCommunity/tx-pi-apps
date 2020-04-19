@@ -1,0 +1,20 @@
+#!/bin/bash
+#
+# Enable / disable SSH via TX-Pi config
+#
+
+case "$1" in
+    enable)
+        echo "Enable SSH"
+        systemctl start ssh.service
+        systemctl enable ssh.service
+    ;;
+    disable)
+        echo "Disable SSH"
+        systemctl stop ssh.service
+        systemctl disable ssh.service
+    ;;
+    *)
+        echo "Usage: $0 {enable|disable}"
+        exit 1
+esac

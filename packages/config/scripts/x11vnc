@@ -1,0 +1,22 @@
+#!/bin/bash
+#
+# Enable / disable x11vnc via TX-Pi config
+#
+
+case "$1" in
+    enable)
+        echo "Enable X11 VNC"
+        systemctl start x11vnc.service
+        systemctl enable x11vnc.service
+    ;;
+    disable)
+        echo "Disable X11 VNC"
+        systemctl stop x11vnc.service
+        systemctl disable x11vnc.service
+    ;;
+    *)
+        echo "Usage: $0 {enable|disable}"
+        exit 1
+esac
+
+exit 0

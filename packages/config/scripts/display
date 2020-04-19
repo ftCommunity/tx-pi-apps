@@ -1,0 +1,87 @@
+#! /usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""\
+Sets the display config via TX-Pi config
+"""
+import sys
+import re
+
+_CALIB_FILE = '/usr/share/X11/xorg.conf.d/99-calibration.conf'
+
+_CALIB_PATTERN = re.compile(r'^[\t ]*Option[\t ]+"Calibration"[\t ]+'
+                            r'"(\d+)[ ]+(\d+)[ ]+(\d+)[ ]+(\d+)"'
+                            r'[ ]*$', re.MULTILINE)
+
+_WS_DRIVER_PATTERN = re.compile(r'^dtoverlay=(waveshare[^:\n]+)', re.MULTILINE)
+
+
+def calc_calibration(old_calib, rotate):
+    """\
+    Returns a new calibration setting for the new `rotate` value based on
+    the old calibration setting.
+
+    :param tuple old_calib: Tuple of ints (xmin, xmax, ymin, ymax)
+    :param int rotate: New rotation value.
+    :return: Tuple of ints (xmin, xmax, ymin, ymax)
+    """
+    xmin, xmax, ymin, ymax = old_calib
+    # 90, 180: xmin > xmax
+    #  0, 270: xmin < xmax
+    if xmin > xmax and rotate not in (90, 180) or xmin < xmax and rotate not in (0, 270):
+        xmin, xmax = xmax, xmin
+    # 180, 270: ymin > ymax
+    #   0,  90: ymin < ymax
+    if ymin > ymax and rotate not in (180, 270) or ymin < ymax and rotate not in (0, 90):
+        ymin, ymax = ymax, ymin
+    return xmin, xmax, ymin, ymax
+
+
+def main(rotate, speed, fps):
+    rotate = int(rotate)
+    if rotate not in (0, 90, 180, 270):
+        raise ValueError('Unsupported rotate value')
+    # config.txt
+    with open('/boot/config.txt', 'r') as f:
+        config_txt = f.read()
+    m = _WS_DRIVER_PATTERN.search(config_txt)
+    if not m:
+        raise ValueError('Waveshare driver pattern did not match')
+    is_ws35 = 'waveshare35' in m.group(1)
+    params = ['rotate={0}'.format(rotate)]
+    if is_ws35 and rotate == 90:
+        # Special case for WS 3.5" displays: Omit rotation iff rotation is 90
+        params = []
+    if speed and int(speed) > 16:  # 16 MHz is the default, no need to set it.
+        params.append('speed={0}'.format(int(speed) * 1000000))
+    if fps and int(fps) > 0:
+        params.append('fps={0}'.format(int(fps)))
+    param_str = ':{0}'.format(','.join(params)) if params else ''
+    config_txt = re.sub(r'^(dtoverlay=waveshare[^:\n]+)[^\n]*$',
+                        r'\1{0}'.format(param_str), config_txt, flags=re.MULTILINE)
+    # screen calibration
+    swap_axes = 1 if rotate in (90, 270) else 0
+    with open(_CALIB_FILE, 'r') as f:
+        calib_file_content = f.read()
+    calib_file_content = re.sub(r'^([ ]*Option[ ]+"SwapAxes"[ ]+")[^"]+("[ ]*)$',
+                                r'\g<1>{0}\g<2>'.format(swap_axes),
+                                calib_file_content, flags=re.MULTILINE)
+    m = _CALIB_PATTERN.search(calib_file_content)
+    if not m:
+        raise ValueError('Calibration pattern did not match')
+    calib = tuple(map(int, m.groups()))
+    new_calib = ' '.join(map(str, calc_calibration(calib, rotate)))
+    calib_file_content = re.sub(r'\d+[ ]+\d+[ ]+\d+[ ]+\d+', new_calib,
+                                calib_file_content)
+    # Write changed config and calibration
+    with open('/boot/config.txt', 'w') as f:
+        f.write(config_txt)
+    with open(_CALIB_FILE, 'w') as f:
+        f.write(calib_file_content)
+
+
+if __name__ == '__main__':
+    try:
+        main(*sys.argv[1:])
+    except Exception as ex:
+        print(ex)
+        sys.exit(1)
