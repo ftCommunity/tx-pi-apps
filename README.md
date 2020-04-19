@@ -7,4 +7,4 @@ firmware](https://cfw.ftcommunity.de/) shop, but an addition.
 
 Ideally, all apps should work under the TX-Pi and the cfw. This project 
 contains apps that do not make sense for the cfw or only work with the 
-TX-Pi due to technical limitations of the cfw hardware.
+TX-Pi due to technical limitations of the fischertechnik hardware.
