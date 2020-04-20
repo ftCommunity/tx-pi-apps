@@ -1,0 +1,5 @@
+.*      export-ignore
+art     export-ignore
+tests   export-ignore
+*.ts    text eol=lf
+*.qm    binary

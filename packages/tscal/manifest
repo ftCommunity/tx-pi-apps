@@ -1,0 +1,14 @@
+[app]
+name = TS-Cal
+category = System
+author = Lars Heuer
+icon = icon.png
+desc = Touchscreen calibration
+version = 0.0.3
+exec = tscal.py
+uuid = ffe0d8c4-be33-4f62-b25d-2fa7923daaa2
+managed = yes
+firmware = 0.9
+
+[de]
+desc = Touchscreen Kalibration
