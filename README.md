@@ -14,13 +14,13 @@ of the fischertechnik hardware.
 ## Usage as shop
 
 The shop is pre-installed for all TX-Pi that use the current Raspbian 
-Buster. You can find the "TX-Pi Apps" shop in the Shop app. Click on the
+Buster. You can find the "TX-Pi Apps" shop in the Store app. Click on the
 menu and then select "TX-Pi Apps".
 
 ![TX-Pi Apps shop](images/shop.png)
 
 If the shop is not available on your device, select the menu and then "New". 
-There you enter "TX-Pi Apps" under "Name" and "ftCommunity" under "User". 
+There you enter "TX-Pi Apps" for "Name" and "ftCommunity" for "User". 
 Enter "tx-pi-apps" as the repository.
 
  
