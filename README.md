@@ -25,3 +25,5 @@ There you enter "TX-Pi Apps" for "Name" and "ftCommunity" for "User".
 Enter "tx-pi-apps" as the repository.
 
 ![TX-Pi Apps new store](images/store-new.png)
+
+Confirm your changes, then the TX-Pi store should be available.
