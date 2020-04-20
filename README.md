@@ -18,8 +18,10 @@ The store is pre-installed for all TX-Pi devices that use the current Raspbian
 Buster operating system. You can find the "TX-Pi Apps" store in the Store app. 
 Click on the menu and then select "TX-Pi Apps".
 
-![TX-Pi Apps shop](images/shop.png)
+![TX-Pi Apps store](images/store.png)
 
 If the store is not available on your device, select the menu and then "New". 
 There you enter "TX-Pi Apps" for "Name" and "ftCommunity" for "User". 
 Enter "tx-pi-apps" as the repository.
+
+![TX-Pi Apps new store](images/store-new.png)
