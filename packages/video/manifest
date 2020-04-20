@@ -1,0 +1,11 @@
+[app]
+name: Video
+category: Demos
+author: Till Harbaum &lt;till@harbaum.org&gt;
+icon: icon.png
+desc: A video player, needs mplayer. Attention: Download includes a 20MB movie. Movie (c) copyright 2008, Blender Foundation / www.bigbuckbunny.org
+exec: video.py
+managed: yes
+uuid: fd3aefda-7843-4ffb-9483-b43ef4ce2050
+version: 1.0
+firmware: >=0.9

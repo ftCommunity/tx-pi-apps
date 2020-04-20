@@ -1,0 +1,39 @@
+; list of packages
+; this file contains all manifests
+
+[config]
+name: Config
+category: System
+author: Lars Heuer
+icon: icon.png
+desc: Configure the TX-Pi
+version: 0.0.8
+exec: config.py
+uuid: e7b22a70-7366-4090-b251-5fead780c5a0
+managed: yes
+firmware: 0.9
+desc_de: TX-Pi Konfiguration
+
+[shell]
+name: Shell
+category: Tools
+author: Till Harbaum &lt;till@harbaum.org&gt;
+icon: icon.png
+desc: An embedded xterm
+exec: shell.py
+managed: yes
+uuid: 0480ab5d-0263-441a-b7d2-49199fe36f54
+version: 1.0
+firmware: >=0.9
+
+[video]
+name: Video
+category: Demos
+author: Till Harbaum &lt;till@harbaum.org&gt;
+icon: icon.png
+desc: A video player, needs mplayer. Attention: Download includes a 20MB movie. Movie (c) copyright 2008, Blender Foundation / www.bigbuckbunny.org
+exec: video.py
+managed: yes
+uuid: fd3aefda-7843-4ffb-9483-b43ef4ce2050
+version: 1.0
+firmware: >=0.9
