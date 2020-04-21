@@ -602,7 +602,7 @@ class DisplayPane(Pane):
         self._speed.setEnabled(False)
         self._fps.setEnabled(False)
         self._btn_apply.setEnabled(False)
-        # Provide alwas all three params even if they're empty
+        # Provide always all three params even if they're empty
         self.run_script('display', [rotation, str(speed), str(fps)], self._on_apply_finished)
 
     def _on_apply_finished(self, exit_code, exit_status):
