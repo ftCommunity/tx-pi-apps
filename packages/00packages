@@ -26,6 +26,19 @@ uuid: 0480ab5d-0263-441a-b7d2-49199fe36f54
 version: 1.0
 firmware: >=0.9
 
+[tscal]
+name: TS-Cal
+category: System
+author: Lars Heuer
+icon: icon.png
+desc: Touchscreen calibration
+version: 0.0.3
+exec: tscal.py
+uuid: ffe0d8c4-be33-4f62-b25d-2fa7923daaa2
+managed: yes
+firmware: 0.9
+desc_de: Touchscreen Kalibration
+
 [video]
 name: Video
 category: Demos
@@ -37,3 +50,4 @@ managed: yes
 uuid: fd3aefda-7843-4ffb-9483-b43ef4ce2050
 version: 1.0
 firmware: >=0.9
+depends: mplayer

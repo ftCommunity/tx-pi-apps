@@ -9,3 +9,4 @@ managed: yes
 uuid: fd3aefda-7843-4ffb-9483-b43ef4ce2050
 version: 1.0
 firmware: >=0.9
+depends: mplayer
