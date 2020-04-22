@@ -2,7 +2,7 @@
 #-*- coding:utf-8 -*-
 
 from TxtStyle import *
-import sys
+import sys, bisect
 
 # ../../user/video/video.py
 
@@ -95,7 +95,8 @@ class PacketListView(QListView):
         
     def __init__(self, parent):
         super(PacketListView, self).__init__(parent)
-        self.model = QStringListModel()
+        # self.model = QStringListModel()
+        self.model = QStandardItemModel()
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setModel(self.model)
         self.setStyleSheet(self.style)
@@ -105,8 +106,24 @@ class PacketListView(QListView):
         self.setBatchSize( 10 );
         self.clicked.connect(self.onClick)       
 
-    def setPacketList(self, names):
-        self.model.setStringList(names)
+    def setPacketList(self, names, installed):
+        icon = QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "installed.png"))
+        pix = QPixmap(16, 16)
+        pix.fill(QColor("black"));
+        pix.setAlphaChannel(pix);
+        noicn = QIcon(pix)
+
+        for n in names:
+            # use bisect on the sorted list since a regular "in" operation
+            # would be way too slow
+            index = bisect.bisect_left(installed, n)
+            if index > len(installed)-1 or installed[index] != n:            
+                self.model.appendRow(QStandardItem(noicn, n))
+            else:
+                self.model.appendRow(QStandardItem(icon, n))
+                
+        # with QStringListModel:
+        # self.model.setStringList(names)
             
     def onClick(self, index):
         print("CLICK:", self.model.data(index,0))
@@ -146,9 +163,9 @@ class SearchWidget(QWidget):
     def doSearch(self):
         self.request.emit(self.lineEdit.text())
 
-    def setResult(self, result):
+    def setResult(self, packages, installed):
         # print("Result:", result)
-        self.searchResults.setPacketList(result)
+        self.searchResults.setPacketList(packages, installed)
 
 class AppDialog(TouchDialog):
     def __init__(self, package, parent):
@@ -163,6 +180,7 @@ class AppDialog(TouchDialog):
 class AptWidget(QWidget):
     APT_CACHE = "/usr/bin/apt-cache"
     APT_GET = "/usr/bin/apt-get"
+    DPKG = "/usr/bin/dpkg"
 
     def onCommand(self, cmd):
         print("cmd", cmd);
@@ -233,10 +251,12 @@ class AptWidget(QWidget):
 
         self.setLayout(self.vbox)        
         self.busy = None
+
+        # immediately scan for installed apps
+        self.dpkg_cmd(["-l"])
         
     def processError(self):
-        results = bytes(self.process.readAllStandardError()).decode()
-        print("error:", results)
+        pass
         
     def processOutput(self):
         results = bytes(self.process.readAllStandardOutput()).decode()
@@ -278,15 +298,15 @@ class AptWidget(QWidget):
                     
     def finished(self, code, status):
         if code == 0:
-            if self.currentCmd == "pkgnames":
+            if self.currentCmd == "pkgnames": # apt-cache pkgnames
                 self.pkgnames = []
                 for pkgname in self.results.split("\n"):
                     pkgname = pkgname.strip()
                     if len(pkgname) > 0:
                         self.pkgnames.append(pkgname)
                 self.pkgnames.sort()
-                self.list.setPacketList(self.pkgnames)
-            elif self.currentCmd == "search":
+                self.list.setPacketList(self.pkgnames, self.installed)
+            elif self.currentCmd == "search": # apt-cache search
                 self.pkgnames = []
                 # search also returns a description. We don't really
                 # have space to display that ...
@@ -294,21 +314,42 @@ class AptWidget(QWidget):
                     if len(p.split()) > 1:
                         self.pkgnames.append(p.split()[0].strip())
                 self.pkgnames.sort()
-                self.search.setResult(self.pkgnames)
-            elif self.currentCmd == "show":
+                self.search.setResult(self.pkgnames, self.installed)
+            elif self.currentCmd == "show": # apt-cache show
                 package = self.parseShowResults(self.results)                
                 self.showPackageDialog(package)
+            elif self.currentCmd == "-l": # dpkg -l
+                self.installed = []
+                for p in self.results.split("\n"):
+                    parts = p.split()
+                    if len(parts) >= 5:
+                        flag,name,ver,arch = parts[0:4]
+                        desc = " ".join(parts[4:])
+
+                        # the arch flags allows some kind of sanity check
+                        if arch == "all" or arch == "amd64" or arch == "i386" or arch == "armhf":
+                            # ii are installed files
+                            # rc are deinstalled files with config left
+                            if flag == "ii":
+                                #print(flag,name,ver,arch, desc)
+                                self.installed.append(name.split(":")[0])
+                        else:
+                            print("Unsupported arch", arch)
+
+                # we now have packages _and_ know the installed files
+                # most installed packages should also be in pkgnames
+                self.installed.sort()
             else:
                 print("Current command unknown:", self.currentCmd)
         else:
-            print("ERROR")
+            print("ERROR:", code)
             # TODO: display error message
 
         self.currentCmd = None
         self.busy.close()
         self.busy = None
-        
-    def apt_cache_cmd(self, parms):
+
+    def do_cmd(self, cmd, parms):
         self.process  = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.processOutput)
         self.process.readyReadStandardError.connect(self.processError)
@@ -316,11 +357,16 @@ class AptWidget(QWidget):
 
         self.currentCmd = parms[0]
         self.results = ""
-        self.process.start( self.APT_CACHE, parms )
+        self.process.start(cmd, parms )
             
         self.busy = BusyAnimation(self)
-        # self.package_loader.progress.connect(self.busy.progress)
         self.busy.show()
+        
+    def apt_cache_cmd(self, parms):
+        self.do_cmd(self.APT_CACHE, parms)
+
+    def dpkg_cmd(self, parms):
+        self.do_cmd(self.DPKG, parms)
         
 class FtcGuiApplication(TouchApplication):
     def __init__(self, args):
