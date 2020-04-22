@@ -40,6 +40,7 @@ del _parser
 
 _SCRIPTS_PATH = '/opt/ftc/apps/system/txpiconfig/scripts'
 
+
 def app_path():
     """\
     Returns the path of the application directory.
