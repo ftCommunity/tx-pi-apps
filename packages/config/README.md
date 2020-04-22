@@ -5,7 +5,7 @@ This project provides a configuration application for the TX-Pi.
 
 ## Config panes
 
-The configuarion dialogs are organized in "panes". Each
+The configuartion dialogs are organized in "panes". Each
 pane represents a specific configuration aspect. The context menu
 is used to switch between the panes.
 
@@ -26,13 +26,3 @@ the ``tx-pi-setup.sh`` script (see section ``/etc/sudoers.d/txpiconfig``).
 If changing the configuration requires a reboot, the ``Pane`` provides
 another helper function ``ask_for_reboot``. The user may cancel the
 recommended reboot, though.
-
-
-## Releases
-If the develop branch is stable, create a release in the
-master branch, tagged with a version number. 
-
-
-## Note
-Since the TX-Pi setup uses the master branch w/o any version number,
-the master branch must be stable.
