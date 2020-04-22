@@ -1,5 +1,8 @@
 # Changes
 
+# 1.0.0 - 2020-04-22
+* Moved scripts to /opt/ftc/apps/system/txpiconfig
+
 # 0.0.7 - 2019-05-03
 * Calibration works for 3,5" rotate=90
 * Added support to enable / disable I²C bus

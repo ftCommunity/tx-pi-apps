@@ -30,7 +30,6 @@ try:
 except ImportError:
     from launcher import BusyAnimation
 
-
 _parser = configparser.ConfigParser()
 with open(os.path.join(os.path.dirname(os.path.realpath(__file__)), 'manifest'), encoding='utf-8') as f:
     _parser.read_file(f)
@@ -39,6 +38,7 @@ __version__ = _parser.get('app', 'version', fallback='n/a')
 
 del _parser
 
+_SCRIPTS_PATH = '/opt/ftc/apps/system/txpiconfig/scripts'
 
 def app_path():
     """\
@@ -216,7 +216,7 @@ class Pane(QWidget):
             callback(exit_code, exit_status)
 
         self.parent()._app.iambusy(True)
-        script = os.path.join(app_path(), 'scripts', name)
+        script = os.path.join(_SCRIPTS_PATH, name)
         proc = QProcess(self)
         proc.finished.connect(on_script_finished)
         proc.start('sudo {0} {1}'.format(script, ' '.join(args)))
