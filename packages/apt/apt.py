@@ -95,7 +95,6 @@ class PacketListView(QListView):
         
     def __init__(self, parent):
         super(PacketListView, self).__init__(parent)
-        # self.model = QStringListModel()
         self.model = QStandardItemModel()
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setModel(self.model)
@@ -109,8 +108,7 @@ class PacketListView(QListView):
     def setPacketList(self, names, installed):
         icon = QIcon(os.path.join(os.path.dirname(os.path.realpath(__file__)), "installed.png"))
         pix = QPixmap(16, 16)
-        pix.fill(QColor("black"));
-        pix.setAlphaChannel(pix);
+        pix.fill(Qt.transparent);
         noicn = QIcon(pix)
 
         for n in names:
@@ -189,6 +187,15 @@ class AptWidget(QWidget):
             self.apt_cache_cmd(['pkgnames'])
         elif cmd == "Search":
             self.setContentSearch(self)
+        elif cmd == "Update":
+            self.setContentAptText(self)
+            self.apt_get_cmd(["-y", "update"])
+        elif cmd == "Upgrade":
+            self.setContentAptText(self)
+            self.apt_get_cmd(["-y", "upgrade"])
+        elif cmd == "Autoremove":
+            self.setContentAptText(self)
+            self.apt_get_cmd(["-y", "autoremove"])
         else:            
             self.setContentString(cmd, self)
 
@@ -222,9 +229,18 @@ class AptWidget(QWidget):
         print("search: ", str)
         self.apt_cache_cmd(["search", str ] )
         
+    def setContentAptText(self, parent):
+        self.removeOldContent()
+        self.text = QTextEdit(self)
+        self.text.setReadOnly(True)
+        self.vbox.addWidget(self.text)
+        self.content = self.text
+
     def setContentString(self, str, parent):
         self.removeOldContent()        
         self.label = QLabel(str, parent)
+        self.label.setWordWrap(True)
+        self.label.setAlignment(Qt.AlignCenter)
         self.vbox.addWidget(self.label)
         self.content = self.label
         
@@ -241,13 +257,15 @@ class AptWidget(QWidget):
         self.combo.addItem("List all")
         self.combo.addItem("Search")
         self.combo.addItem("Update")
+        self.combo.addItem("Upgrade")
+        self.combo.addItem("Autoremove")
         self.combo.activated[str].connect(self.onCommand)
         self.combo.setCurrentIndex(-1)
         self.vbox.addWidget(self.combo)
         
         # add empty content widget
-        self.content = QWidget()
-        self.vbox.addWidget(self.content)        
+        self.content = None
+        self.setContentString("Please choose a command!", self)
 
         self.setLayout(self.vbox)        
         self.busy = None
@@ -260,7 +278,10 @@ class AptWidget(QWidget):
         
     def processOutput(self):
         results = bytes(self.process.readAllStandardOutput()).decode()
-        self.results = self.results + results
+        if self.currentCmd.endswith("apt-get"):
+            self.text.append(results)
+        else:            
+            self.results = self.results + results
 
     def showPackageDialog(self, package):
         dialog = AppDialog(package, self)
@@ -339,6 +360,8 @@ class AptWidget(QWidget):
                 # we now have packages _and_ know the installed files
                 # most installed packages should also be in pkgnames
                 self.installed.sort()
+            elif self.currentCmd.endswith("apt-get"): # sudo apt-get ...
+                pass
             else:
                 print("Current command unknown:", self.currentCmd)
         else:
@@ -348,6 +371,7 @@ class AptWidget(QWidget):
         self.currentCmd = None
         self.busy.close()
         self.busy = None
+        self.combo.setEnabled(True)
 
     def do_cmd(self, cmd, parms):
         self.process  = QProcess(self)
@@ -356,14 +380,21 @@ class AptWidget(QWidget):
         self.process.finished.connect(self.finished)
 
         self.currentCmd = parms[0]
+            
         self.results = ""
         self.process.start(cmd, parms )
             
+        self.combo.setEnabled(False)
         self.busy = BusyAnimation(self)
         self.busy.show()
         
     def apt_cache_cmd(self, parms):
         self.do_cmd(self.APT_CACHE, parms)
+
+    def apt_get_cmd(self, parms):
+        cmd = [ self.APT_GET ]
+        cmd.extend(parms)
+        self.do_cmd("sudo", cmd)
 
     def dpkg_cmd(self, parms):
         self.do_cmd(self.DPKG, parms)

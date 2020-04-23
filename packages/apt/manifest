@@ -7,5 +7,5 @@ desc: Apt package management
 exec: apt.py
 managed: yes
 uuid: a1075fca-e7a9-44dd-9b16-1154209ab2fb
-version: 1.0.1
+version: 1.0.2
 firmware: >=0.9
