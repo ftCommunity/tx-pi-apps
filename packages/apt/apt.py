@@ -4,8 +4,6 @@
 from TxtStyle import *
 import sys, bisect
 
-# ../../user/video/video.py
-
 # a rotating "i am busy" widget to be shown during network io
 class BusyAnimation(QWidget):
     expired = pyqtSignal()
@@ -86,6 +84,8 @@ class BusyAnimation(QWidget):
         painter.end()
 
 class PacketListView(QListView):
+
+    
     select = pyqtSignal(str)
     
     style = ( "font-size: 20px;"
@@ -124,7 +124,6 @@ class PacketListView(QListView):
         # self.model.setStringList(names)
             
     def onClick(self, index):
-        print("CLICK:", self.model.data(index,0))
         self.select.emit(self.model.data(index,0))
         
 class SearchWidget(QWidget):
@@ -162,12 +161,24 @@ class SearchWidget(QWidget):
         self.request.emit(self.lineEdit.text())
 
     def setResult(self, packages, installed):
-        # print("Result:", result)
         self.searchResults.setPacketList(packages, installed)
 
 class AppDialog(TouchDialog):
+    request = pyqtSignal(str, str)
+    
     def __init__(self, package, parent):
         TouchDialog.__init__(self, package["Package"], parent)
+
+        self.package = package
+        
+        menu = self.addMenu()
+        menu_inst = menu.addAction(QCoreApplication.translate("Menu", "Install"))
+        menu_inst.triggered.connect(self.on_install)
+        menu_remove = menu.addAction(QCoreApplication.translate("Menu", "Remove"))
+        menu_remove.triggered.connect(self.on_remove)
+        menu_purge = menu.addAction(QCoreApplication.translate("Menu", "Purge"))
+        menu_purge.triggered.connect(self.on_purge)
+        
         text = QTextEdit()
         text.setReadOnly(True)
         for i in package:
@@ -175,13 +186,77 @@ class AppDialog(TouchDialog):
         text.moveCursor(QTextCursor.Start)
         self.setCentralWidget(text)
 
+    def on_install(self):
+        self.request.emit("install", self.package["Package"])
+
+    def on_remove(self):
+        self.request.emit("remove", self.package["Package"])
+
+    def on_purge(self):
+        self.request.emit("purge", self.package["Package"])
+
+class AptDialog(TouchDialog):
+    cmdControl = pyqtSignal(str)
+        
+    def __init__(self, title, parent):
+        TouchDialog.__init__(self, title, parent)
+        vboxw = QWidget()
+        vbox = QVBoxLayout()
+        vbox.setContentsMargins(0,0,0,0)
+        vbox.setSpacing(0)
+        vboxw.setLayout(vbox)
+
+        # text widget for command output
+        self.text = QTextEdit()
+        self.text.setReadOnly(True)
+        self.text.moveCursor(QTextCursor.Start)
+        vbox.addWidget(self.text)
+
+        # buttons for control
+        self.hboxw = QWidget()
+        hbox = QHBoxLayout()
+        hbox.setContentsMargins(0,0,0,0)
+        hbox.setSpacing(0)
+        self.hboxw.setLayout(hbox)
+
+        yesBtn = QPushButton("Yes", self)
+        yesBtn.clicked.connect(self.sendYes)
+        hbox.addWidget(yesBtn)
+        noBtn = QPushButton("No", self)
+        noBtn.clicked.connect(self.sendNo)
+        hbox.addWidget(noBtn)
+        
+        vbox.addWidget(self.hboxw)
+        
+        self.setCentralWidget(vboxw)
+
+    def sendYes(self):
+        self.cmdControl.emit("yes")
+        
+    def sendNo(self):
+        self.cmdControl.emit("no")
+        
+    def cmdFinished(self, code):
+        if code == 0:
+            self.text.append("\nCommand finished successfully")
+        else:
+            self.text.append("\n<font color='red'><b>Return code:"+str(code)+"</b></font>")
+        
+        # disable the entire hbox as there's nothing to control
+        # anymore
+        self.hboxw.setEnabled(False)
+        
+    def getText(self):
+        return self.text
+        
 class AptWidget(QWidget):
+    cmdFinished = pyqtSignal(int)
+    
     APT_CACHE = "/usr/bin/apt-cache"
     APT_GET = "/usr/bin/apt-get"
     DPKG = "/usr/bin/dpkg"
 
     def onCommand(self, cmd):
-        print("cmd", cmd);
         if cmd == "List all":
             self.setContentPacketList(self)
             self.apt_cache_cmd(['pkgnames'])
@@ -222,11 +297,9 @@ class AptWidget(QWidget):
         self.content = self.search
 
     def showPackage(self, pkgname):
-        print("Search Details for", pkgname)
         self.apt_cache_cmd(["show", pkgname])
         
     def doSearch(self, str):
-        print("search: ", str)
         self.apt_cache_cmd(["search", str ] )
         
     def setContentAptText(self, parent):
@@ -284,9 +357,34 @@ class AptWidget(QWidget):
             self.results = self.results + results
 
     def showPackageDialog(self, package):
-        dialog = AppDialog(package, self)
+        # make sure we register this as a child window of the root
+        self.appDialog = AppDialog(package, self.parent().parent())
+        self.appDialog.request.connect(self.appRequest)
+        self.appDialog.exec_()
+
+    def appRequest(self, cmd, pkg):
+        # open a apt text dialog
+        dialog = AptDialog(cmd, self.appDialog)
+        self.text = dialog.getText()
+
+        # make sure the dialog notices when the command finishs
+        self.cmdFinished.connect(dialog.cmdFinished)
+        dialog.cmdControl.connect(self.appControl)
+
+        self.apt_get_cmd([cmd, pkg])
         dialog.exec_()
 
+        # update internal list of installed packages
+        self.dpkg_cmd(["-l"])
+
+    def appControl(self, c):
+        if c == "yes":
+            self.process.write("y\n".encode())
+        elif c == "no":
+            self.process.write("n\n".encode())
+        else:
+            print("unexpected control:", c)
+        
     def parseShowResults(self, str):
         def htmlize(str):
             str = str.replace("&", "&amp;")
@@ -314,7 +412,6 @@ class AptWidget(QWidget):
                     else:
                         results[name] = results[name] + " " + htmlize(line.strip())
 
-        #print("results:", results)
         return results
                     
     def finished(self, code, status):
@@ -338,7 +435,9 @@ class AptWidget(QWidget):
                 self.search.setResult(self.pkgnames, self.installed)
             elif self.currentCmd == "show": # apt-cache show
                 package = self.parseShowResults(self.results)                
+                self.cmd_done()
                 self.showPackageDialog(package)
+                return
             elif self.currentCmd == "-l": # dpkg -l
                 self.installed = []
                 for p in self.results.split("\n"):
@@ -352,10 +451,7 @@ class AptWidget(QWidget):
                             # ii are installed files
                             # rc are deinstalled files with config left
                             if flag == "ii":
-                                #print(flag,name,ver,arch, desc)
                                 self.installed.append(name.split(":")[0])
-                        else:
-                            print("Unsupported arch", arch)
 
                 # we now have packages _and_ know the installed files
                 # most installed packages should also be in pkgnames
@@ -368,11 +464,15 @@ class AptWidget(QWidget):
             print("ERROR:", code)
             # TODO: display error message
 
+        self.cmd_done()
+        self.cmdFinished.emit(code)
+                
+    def cmd_done(self):            
         self.currentCmd = None
         self.busy.close()
         self.busy = None
-        self.combo.setEnabled(True)
-
+        self.combo.setEnabled(True)        
+        
     def do_cmd(self, cmd, parms):
         self.process  = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.processOutput)
