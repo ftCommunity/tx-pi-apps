@@ -1,0 +1,18 @@
+#!/bin/bash
+#
+# Enable / disable the camera via TX-Pi config
+#
+
+case "$1" in
+    enable)
+        echo "Enable camera"
+        raspi-config nonint do_camera 0
+    ;;
+    disable)
+        echo "Disable camera"
+        raspi-config nonint do_camera 1
+    ;;
+    *)
+        echo "Usage: $0 {enable|disable}"
+        exit 1
+esac

@@ -1,5 +1,8 @@
 # Changes
 
+# 1.1.0 - 2020-05-05
+* Added option to enable / disable the Raspberry camera module port
+
 # 1.0.0 - 2020-04-22
 * Moved scripts to /opt/ftc/apps/system/txpiconfig
 

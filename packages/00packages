@@ -19,7 +19,7 @@ category: System
 author: Lars Heuer
 icon: icon.png
 desc: Configure the TX-Pi
-version: 1.0.0
+version: 1.1.0
 exec: config.py
 uuid: e7b22a70-7366-4090-b251-5fead780c5a0
 managed: yes

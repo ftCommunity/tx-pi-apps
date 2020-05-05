@@ -13,7 +13,7 @@
 #
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 #
-"""TX-Pi Configuration - Copyright (c) 2019 -- Lars Heuer
+"""TX-Pi Configuration - Copyright (c) 2019 - 2020 -- Lars Heuer
 """
 import os
 import re
@@ -66,6 +66,7 @@ class ConfigApp(TouchApplication):
         container.add_pane(ServicesPane(container))
         container.add_pane(HostnamePane(container))
         container.add_pane(DisplayPane(container))
+        container.add_pane(CameraPane(container))
         win.setCentralWidget(container)
         win.show()
         self.exec_()
@@ -622,6 +623,71 @@ class DisplayPane(Pane):
         else:
             # Something went wrong
             self._retrieve_display_config()
+
+
+class CameraPane(Pane):
+    """\
+    Pane to configure the camera.
+    """
+    def __init__(self, parent):
+        super(CameraPane, self).__init__(parent, name=QCoreApplication.translate('ConfigApp', 'Camera'))
+        self._cb_camera = QCheckBox(QCoreApplication.translate('ConfigApp', 'Camera'))
+        self._cb_camera.toggled.connect(lambda checked: self._toggle_camera(checked))
+        layout = QVBoxLayout()
+        layout.addStretch()
+        layout.addWidget(self._cb_camera)
+        layout.addStretch()
+        lbl = QLabel(QCoreApplication.translate('ConfigApp', 'The state of the camera port is persistent: It remains after shutdown.'))
+        lbl.setWordWrap(True)
+        lbl.setObjectName('tinylabel')
+        layout.addWidget(lbl)
+        self.setLayout(layout)
+
+    def before_focus(self):
+        """\
+        Update status of the camera port.
+        """
+        self._retrieve_camera_status()
+
+    def _retrieve_camera_status(self):
+        """\
+        Reads the camera port status and updates the UI.
+        """
+        self._cb_camera.setEnabled(False)
+        self._cb_camera.blockSignals(True)
+        self._cb_camera.setChecked(self._is_camera_enabled())
+        self._cb_camera.blockSignals(False)
+        self._cb_camera.setEnabled(True)
+
+    @staticmethod
+    def _is_camera_enabled():
+        """\
+        Returns if camera is enabled.
+        """
+        with open('/boot/config.txt', 'r') as f:
+            return re.search(r'^start_x\s*=\s*1$', f.read(), re.MULTILINE) is not None
+
+    def _toggle_camera(self, enable):
+        """\
+        Called to save the camera module port status.
+        """
+        self._cb_camera.setEnabled(False)
+        self.run_script('camera', [('enable' if enable else 'disable')],
+                        self._on_apply_finished)
+
+    def _on_apply_finished(self, exit_code, exit_status):
+        """\
+        Called when the camera module port status change was finished.
+
+        :param exit_code:
+        :param exit_status:
+        """
+        if exit_code == 0:
+            self._cb_camera.setEnabled(True)
+            self.ask_for_reboot()
+        else:
+            # Something went wrong
+            self._retrieve_camera_status()
 
 
 if __name__ == "__main__":
