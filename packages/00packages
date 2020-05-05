@@ -13,19 +13,6 @@ uuid: a1075fca-e7a9-44dd-9b16-1154209ab2fb
 version: 1.0.3
 firmware: >=0.9
 
-[config]
-name: Config
-category: System
-author: Lars Heuer
-icon: icon.png
-desc: Configure the TX-Pi
-version: 1.1.0
-exec: config.py
-uuid: e7b22a70-7366-4090-b251-5fead780c5a0
-managed: yes
-firmware: 0.9
-desc_de: TX-Pi Konfiguration
-
 [shell]
 name: Shell
 category: System

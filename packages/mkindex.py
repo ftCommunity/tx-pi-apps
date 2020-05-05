@@ -20,7 +20,7 @@ pkgfile.write("; this file contains all manifests\n")
 
 # scan the directory for app directories
 for l in sorted(os.listdir(".")):
-    if os.path.isdir(l):
+    if os.path.isdir(l) and l != 'config':
         m = os.path.join(l, "manifest")
         if os.path.isfile(m):
             print("Adding", l, "...")
