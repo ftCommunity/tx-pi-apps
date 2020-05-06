@@ -66,7 +66,6 @@ class ConfigApp(TouchApplication):
         container.add_pane(ServicesPane(container))
         container.add_pane(HostnamePane(container))
         container.add_pane(DisplayPane(container))
-        container.add_pane(CameraPane(container))
         win.setCentralWidget(container)
         win.show()
         self.exec_()
@@ -274,11 +273,6 @@ class Pane(QWidget):
         return True
 
 
-# Service names
-_SERVICE_SSH = 'ssh'
-_SERVICE_VNC = 'x11vnc'
-
-
 class ServicesPane(Pane):
     """\
     Pane to configure services.
@@ -288,6 +282,7 @@ class ServicesPane(Pane):
         self._cb_ssh = QCheckBox(QCoreApplication.translate('ConfigApp', 'SSH server'))
         self._cb_vnc = QCheckBox(QCoreApplication.translate('ConfigApp', 'VNC server'))
         self._cb_i2c = QCheckBox(QCoreApplication.translate('ConfigApp', 'I2C bus'))
+        self._cb_camera = QCheckBox(QCoreApplication.translate('ConfigApp', 'Camera'))
         layout = QVBoxLayout()
         lbl = QLabel(QCoreApplication.translate('ConfigApp', 'Services'))
         layout.addWidget(lbl)
@@ -298,14 +293,17 @@ class ServicesPane(Pane):
         layout.addStretch()
         layout.addWidget(self._cb_i2c)
         layout.addStretch()
+        layout.addWidget(self._cb_camera)
+        layout.addStretch()
         lbl = QLabel(QCoreApplication.translate('ConfigApp', 'The state of the services is persistent: It remains after shutdown.'))
         lbl.setWordWrap(True)
         lbl.setObjectName('tinylabel')
         layout.addWidget(lbl)
         self.setLayout(layout)
-        self._cb_ssh.toggled.connect(lambda checked: self._toggle_service(_SERVICE_SSH, checked))
-        self._cb_vnc.toggled.connect(lambda checked: self._toggle_service(_SERVICE_VNC, checked))
-        self._cb_i2c.toggled.connect(lambda checked: self._toggle_i2c(checked))
+        self._cb_ssh.toggled.connect(lambda checked: self._toggle_service('ssh', checked))
+        self._cb_vnc.toggled.connect(lambda checked: self._toggle_service('x11vnc', checked))
+        self._cb_i2c.toggled.connect(lambda checked: self._toggle_service('i2c', checked, reboot=True))
+        self._cb_camera.toggled.connect(lambda checked: self._toggle_service('camera', checked, reboot=True))
 
     def before_focus(self):
         """\
@@ -320,14 +318,11 @@ class ServicesPane(Pane):
         :param bool enabled: ``True`` to enable all GUI elements and let them emit signals;
                              ``False`` to disable all GUI elements and to omit signals.
         """
-        self._cb_ssh.setEnabled(enabled)
-        self._cb_vnc.setEnabled(enabled)
-        self._cb_i2c.setEnabled(enabled)
-        # Block signals if enabled is False to avoid a "toggled" signal if the
-        # "checked" state is changed via code
-        self._cb_ssh.blockSignals(not enabled)
-        self._cb_vnc.blockSignals(not enabled)
-        self._cb_i2c.blockSignals(not enabled)
+        for cb in (self._cb_ssh, self._cb_vnc, self._cb_i2c, self._cb_camera):
+            cb.setEnabled(enabled)
+            # Block signals if enabled is False to avoid a "toggled" signal if the
+            # "checked" state is changed via code
+            cb.blockSignals(not enabled)
 
     def _update_current_service_status(self):
         """\
@@ -335,12 +330,14 @@ class ServicesPane(Pane):
         status of the services.
         """
         self._set_gui_elements_enabled(False)
-        ssh_enabled = self._get_service_status(_SERVICE_SSH)
-        vnc_enabled = self._get_service_status(_SERVICE_VNC)
+        ssh_enabled = self._get_service_status('ssh')
+        vnc_enabled = self._get_service_status('x11vnc')
         i2c_enabled = self._get_i2c_status()
+        cam_enabled = self._get_camera_status()
         self._cb_ssh.setChecked(ssh_enabled)
         self._cb_vnc.setChecked(vnc_enabled)
         self._cb_i2c.setChecked(i2c_enabled)
+        self._cb_camera.setChecked(cam_enabled)
         self._set_gui_elements_enabled(True)
 
     @staticmethod
@@ -367,7 +364,15 @@ class ServicesPane(Pane):
             return re.search(r'^(device_tree_param|dtparam)=([^,]*,)*i2c(_arm)?(=(on|true|yes|1))?(,.*)?$',
                              f.read(), re.MULTILINE) is not None
 
-    def _toggle_service(self, service_name, enable):
+    @staticmethod
+    def _get_camera_status():
+        """\
+        Returns if camera is enabled.
+        """
+        with open('/boot/config.txt', 'r') as f:
+            return re.search(r'^start_x\s*=\s*1$', f.read(), re.MULTILINE) is not None
+
+    def _toggle_service(self, service_name, enable, reboot=False):
         """\
         Enable / disable the provided service.
 
@@ -376,39 +381,25 @@ class ServicesPane(Pane):
 
         :param service_name: The service name.
         :param bool enable: Boolean indicating if the service should become enabled.
+        :param bool reboot: Ask for reboot on success (default: False)? 
         """
+        on_toggle_finished = partial(self._on_toggle_finished, reboot=reboot)
         self._set_gui_elements_enabled(False)
         self.run_script(service_name, [('enable' if enable else 'disable')],
-                        self._on_toggle_finished)
+                        on_toggle_finished)
 
-    def _toggle_i2c(self, enable):
-        """
-        Toggles the I2C bus.
-
-        :param bool enable: Boolean if the I2C bus should be enabled.
-        """
-        def on_toggled(exit_code, exit_status):
-            """\
-            Special "toggle finished" function which displays a reboot dialog
-            iff toggling was successful.
-            """
-            self._on_toggle_finished(exit_code, exit_status)
-            if exit_code == 0:
-                self.ask_for_reboot()
-
-        self._set_gui_elements_enabled(False)
-        self.run_script('i2cbus', [('enable' if enable else 'disable')],
-                        on_toggled)
-
-    def _on_toggle_finished(self, exit_code, exit_status):
+    def _on_toggle_finished(self, exit_code, exit_status, reboot):
         """\
         Called when a service was enabled / disabled.
 
-        :param exit_code:
-        :param exit_status:
+        :param exit_code: Exit code.
+        :param exit_status: Exit status.
+        :param bool reboot: Ask for reboot on success?
         """
         if exit_code == 0:
             self._set_gui_elements_enabled(True)
+            if reboot:
+                self.ask_for_reboot()
         else:
             # Something went wrong, update the current state of the services
             self._update_current_service_status()
@@ -623,71 +614,6 @@ class DisplayPane(Pane):
         else:
             # Something went wrong
             self._retrieve_display_config()
-
-
-class CameraPane(Pane):
-    """\
-    Pane to configure the camera.
-    """
-    def __init__(self, parent):
-        super(CameraPane, self).__init__(parent, name=QCoreApplication.translate('ConfigApp', 'Camera'))
-        self._cb_camera = QCheckBox(QCoreApplication.translate('ConfigApp', 'Camera'))
-        self._cb_camera.toggled.connect(lambda checked: self._toggle_camera(checked))
-        layout = QVBoxLayout()
-        layout.addStretch()
-        layout.addWidget(self._cb_camera)
-        layout.addStretch()
-        lbl = QLabel(QCoreApplication.translate('ConfigApp', 'The state of the camera port is persistent: It remains after shutdown.'))
-        lbl.setWordWrap(True)
-        lbl.setObjectName('tinylabel')
-        layout.addWidget(lbl)
-        self.setLayout(layout)
-
-    def before_focus(self):
-        """\
-        Update status of the camera port.
-        """
-        self._retrieve_camera_status()
-
-    def _retrieve_camera_status(self):
-        """\
-        Reads the camera port status and updates the UI.
-        """
-        self._cb_camera.setEnabled(False)
-        self._cb_camera.blockSignals(True)
-        self._cb_camera.setChecked(self._is_camera_enabled())
-        self._cb_camera.blockSignals(False)
-        self._cb_camera.setEnabled(True)
-
-    @staticmethod
-    def _is_camera_enabled():
-        """\
-        Returns if camera is enabled.
-        """
-        with open('/boot/config.txt', 'r') as f:
-            return re.search(r'^start_x\s*=\s*1$', f.read(), re.MULTILINE) is not None
-
-    def _toggle_camera(self, enable):
-        """\
-        Called to save the camera module port status.
-        """
-        self._cb_camera.setEnabled(False)
-        self.run_script('camera', [('enable' if enable else 'disable')],
-                        self._on_apply_finished)
-
-    def _on_apply_finished(self, exit_code, exit_status):
-        """\
-        Called when the camera module port status change was finished.
-
-        :param exit_code:
-        :param exit_status:
-        """
-        if exit_code == 0:
-            self._cb_camera.setEnabled(True)
-            self.ask_for_reboot()
-        else:
-            # Something went wrong
-            self._retrieve_camera_status()
 
 
 if __name__ == "__main__":
