@@ -114,7 +114,7 @@ class ConfigApp(TouchApplication):
 
     def poll(self):
         # Called by launcher.BusyAnimation
-        return True
+        return False
 
 
 class PaneContainer(QStackedWidget):
