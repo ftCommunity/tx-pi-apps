@@ -112,6 +112,10 @@ class ConfigApp(TouchApplication):
         self.win.centralWidget.setGraphicsEffect(cw_effect)
         self.win.titlebar.setGraphicsEffect(tb_effect)
 
+    def poll(self):
+        # Called by launcher.BusyAnimation
+        return True
+
 
 class PaneContainer(QStackedWidget):
     """\
