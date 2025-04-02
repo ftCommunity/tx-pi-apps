@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# TS-Cal -- An application to calibrate the touchscreen.
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: Copyright (c) 2019 - 2025 -- Lars Heuer
 #
-# Written in 2019 by Lars Heuer
+# TS-Cal -- An application to calibrate the touchscreen.
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related and neighboring rights to this software to the public domain
@@ -22,8 +23,8 @@ import os
 import re
 import sys
 import subprocess
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from TouchStyle import TouchApplication, TouchWindow
 
 # Must be writable by ftc user

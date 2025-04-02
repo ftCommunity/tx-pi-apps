@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Config -- An application to configure a TX-Pi.
+# SPDX-License-Identifier: CC0-1.0
+# SPDX-FileCopyrightText: Copyright (c) 2019 - 2025 -- Lars Heuer
 #
-# Written in 2019 by Lars Heuer
+# Config -- An application to configure a TX-Pi.
 #
 # To the extent possible under law, the author(s) have dedicated all copyright
 # and related and neighboring rights to this software to the public domain
@@ -13,7 +14,7 @@
 #
 # If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 #
-"""TX-Pi Configuration - Copyright (c) 2019 - 2020 -- Lars Heuer
+"""TX-Pi Configuration
 """
 import os
 import re
@@ -22,8 +23,8 @@ import subprocess
 import configparser
 from collections import namedtuple
 from functools import partial
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 from TouchStyle import TouchApplication, TouchWindow, TouchMessageBox
 try:
     from TouchStyle import BusyAnimation
